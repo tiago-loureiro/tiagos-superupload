@@ -1,12 +1,12 @@
 <!DOCTYPE HTML>
 <html>
-	<head>
-    	<script language="javascript" type="text/javascript" src="/static/external/jquery.js"></script>
-    	<script language="javascript" type="text/javascript" src="/static/upload.js"></script>
+    <head>
+        <script language="javascript" type="text/javascript" src="/static/external/jquery.js"></script>
+        <script language="javascript" type="text/javascript" src="/static/upload.js"></script>
     </head>
-	<body>
-    	<form action="/upload" method="post" enctype="multipart/form-data">
-        	<input type="file" onChange="setId();window.parent.uploadStarted();submit()" cols="80" value="Select file" name="file"></input>
-    	</form>
-	</body>
+    <body>
+        <form action="/upload" method="post" enctype="multipart/form-data">
+            <input type="file" onChange="setId();window.parent.uploadStarted();submit()" cols="80" value="Select file" name="file"></input>
+        </form>
+    </body>
 </html>
