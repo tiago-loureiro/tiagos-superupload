@@ -25,10 +25,16 @@ socket.on('connect', function () {
 		$('#percent').text('Status: ' + data + '%');
 	});
 	
+	socket.on('error', function(data) {
+		$('#percent').text(data);
+		$('#fileLocation').hide();
+	});
+	
 	socket.on('url', function(data) {
 		//We still set here the status to 100% since the user
 		//might have not received this message since it's sent
 		//from the server 'only' once per second.
+		percentDone = 100;
 		$('#percent').text('Status: 100%');
 		$('#fileLocation').html('<a href=' + data + '>Uploaded to here!</a>');
 	});

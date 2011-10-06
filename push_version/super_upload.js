@@ -53,11 +53,11 @@ function Logger(str, httpReq) {
     }
     this.warn = function(str, httpReq) {
         setup(str, httpReq);
-        console.log('[WARN]: ' + formattedDate + str);
+        console.warn('[WARN]: ' + formattedDate + str);
     }
     this.error = function(str, httpReq) {
         setup(str, httpReq);
-        console.log('[ERROR]: ' + formattedDate + str);
+        console.error('[ERROR]: ' + formattedDate + str);
     }
 }
 //===============================================================================
@@ -71,24 +71,26 @@ var serverHTTP = http.createServer(function (req, res) {
     req.parsedUrl.parsedQuery = querystring.parse(req.parsedUrl.query || '');
 
     logger.debug('Request for url: ' + req.url, req);
-
-    switch (req.parsedUrl.pathname) {
-        case '/done':
-            handleDone(req, res);
-            break;
-        case '/download':
-            handleDownload(req, res);
-            break;
-        case '/upload': 
-            handleUpload(req, res);
-            break;
-        default:
-            handleStaticFile(req, res);
+    try {
+        switch (req.parsedUrl.pathname) {
+            case '/done':
+                handleDone(req, res);
+                break;
+            case '/download':
+                handleDownload(req, res);
+                break;
+            case '/upload': 
+                handleUpload(req, res);
+                break;
+            default:
+                handleStaticFile(req, res);
+         }
+     } catch(err) {
+         logger.error('Error handling request!: ' + err);
      }
 });
 
 var serverAddress = '79.168.102.155';
-//var serverAddress = 'localhost';
 var serverPort = 8080;
 var clientMap = {};
 var logger = new Logger();
@@ -171,11 +173,11 @@ function sendMessages() {
         var sock = socket.sockets.clients()[i];
         if(sock) {
             var client = clientMap[sock.sessId];
+            logger.debug('Client with sessid: ' + sock.sessId + ' with state: ' + client.state);
             switch(client.state) {
                 case 'none':
                     break;
                 case 'progress':
-                    logger.debug('Sending progress');
                     sock.emit('progress',client.percent);
                     break;
                 case 'url':
@@ -187,6 +189,8 @@ function sendMessages() {
                     break;
                 case 'done':
                     break;
+                case 'error':
+                    sock.emit('error','An error has ocurred, please try uploading again!');
                 default:
                     logger.error('Unknown state!');
             }
@@ -214,9 +218,8 @@ function handleStaticFile(req, res) {
                     var contentType = 'text/html';
                     if (filePath.substr(-3) == '.js')
                         contentType = 'application/javascript';
-                    var encoding = 'utf-8';
                     res.writeHead(200, {'Content-Type': contentType});
-                    res.end(content, encoding);
+                    res.end(content, 'utf-8');
                 }
             });
         } else {
@@ -243,12 +246,11 @@ function handleDone(req, res) {
     });
     
     req.on('end', function() {
-        // parse the received body data
-        var decodedBody = querystring.parse(fullBody);
+        var parsedBody = querystring.parse(fullBody);
         // at this point the directory is already created
         var fullPathFileName = path.join(__dirname, 'uploads', clientMap[req.parsedUrl.parsedQuery.upload_uuid].id, 'description.txt');
         var fileStream = fs.createWriteStream(fullPathFileName);
-        fileStream.write(decodedBody.descriptionText,'utf-8');
+        fileStream.write(parsedBody.descriptionText, 'utf-8');
         fileStream.end();
         
         // notify end state
@@ -258,7 +260,7 @@ function handleDone(req, res) {
         res.write('<br><br>Thank you for using SuperUpload! Your file has been stored at: <br><br>');
         res.write(clientMap[req.parsedUrl.parsedQuery.upload_uuid].url);
         res.write('<br><br>Along with the description:<br>"');
-        res.write(decodedBody.descriptionText + '"');
+        res.write(parsedBody.descriptionText + '"');
         res.end();
      });
 }
@@ -272,24 +274,23 @@ function handleDone(req, res) {
  */
 function handleDownload(req, res) {
 
-    var file = path.join('uploads',req.parsedUrl.parsedQuery.file);
-    var filename = path.basename(file);
+    var file = path.join("uploads",req.parsedUrl.parsedQuery.file);
+    var filename = path.basename(file);    
     var mimetype = mime.lookup(file);
     
-    logger.debug('Downloading file: ' + file, req);
-    
+    logger.debug('Downloading file: ' + file + ' and full path:' + req.parsedUrl.parsedQuery.file, req);
+
     path.exists(file, function(exists) {
         if(exists) {
-            res.setHeader('Content-disposition', 'attachment; filename=' + filename);
+                
+            res.setHeader('Content-disposition', ' attachment; filename=' + filename);
             res.setHeader('Content-type', mimetype);
-
-            var readStream = fs.createReadStream(file,{'flags': 'r', 'encoding': 
-                                                       'binary', 'mode': 0666});
-        
-            //Pump is a very useful function in utils that does throttling of
+            var readStream = fs.createReadStream(file,{'flags': 'r', 'mode': 0666});
+            
+            util.pump(readStream, res);
+            //pump is a very useful function that does throttling of
             //the reading (in readStream) to the response so that it does
             //not send out too much data at once!
-            util.pump(readStream, res);
         } else {
             logger.error('Failed downloading file: ' + req.parsedUrl, req);
             res.writeHead(404);
@@ -335,8 +336,9 @@ function handleUpload(req, res) {
     var uploadUUID = req.parsedUrl.parsedQuery.upload_uuid;
     if (!uploadUUID || !clientMap[uploadUUID] || clientMap[uploadUUID].state == 'done') {
         logger.error('No valid uploadUUID or multiple request?!?', req);
+        clientMap[uploadUUID].state = 'error';
         res.writeHead(200, {'Content-Type': 'text/html'});          
-        res.end('No valid uploadUUID');
+        res.end('No valid uploadUUID, please refresh the page and try again!');
         return;
     }
 
@@ -356,6 +358,7 @@ function handleUpload(req, res) {
         fs.mkdirSync(dirName, 0755);
     } catch(err) {
         logger.error('Could not create dir: ' + dirName);
+        clientMap[uploadUUID].state = 'error';
         res.end('Sorry, your upload has failed. Could not create directory: ' + dirName);
         return;
     }
@@ -375,7 +378,7 @@ function handleUpload(req, res) {
         //validated... for instance, if they contain ',' no filename
         //appers
         if(typeof stream.part.filename === 'undefined') {
-            logger.debug('closing the stream');
+            logger.debug('Closing the stream as couldnt parse the filename');
             res.end('Sorry we could not parse the filename, try again!');
             clientMap[uploadUUID].error = 1;
             stream.close();
@@ -391,21 +394,24 @@ function handleUpload(req, res) {
         logger.debug('Trying to create file, name=' + part.name + ', size=' + fileSize + ' filename=' + fileNameUnparsed + ' dir=' + dirName + 'len=' + fileSize + ' parsed=' + fileName, req);
         
         var fullPathFileName = path.join(dirName,fileName);
+        logger.debug('File being created at: ' + fullPathFileName);
         fileStream = fs.createWriteStream(fullPathFileName);
         
         fileStream.addListener('error', function(err) {
             logger.error('Got error while writing to file ' + fileName + ': ' + err, req);
             clientMap[uploadUUID].error = 1;
+            clientMap[uploadUUID].state = 'error';
             res.end('Sorry, your upload has failed. Could not write to disk... full? Please refresh the page and try again!');
         });
 
-        //' Add drain (all queued data written) handler to resume receiving request data
+        //Add drain (all queued data written) handler to resume receiving request data
         fileStream.addListener('drain', function() {
             try {
                 req.resume();           
             } catch(err) {
                 clientMap[uploadUUID].error = 1;
-                logger.error('Sorry, your upload has failed. File too big? ' + err, req);
+                clientMap[uploadUUID].state = 'error';
+                logger.error('Sorry, your upload has failed. File too big? ' + err + ' user=' + uploadUUID, req);
                 res.end('Sorry, your upload has failed. File too big? ' + err);
             }
         });
@@ -430,17 +436,18 @@ function handleUpload(req, res) {
     stream.onEnd = function(chunk) {
         // As this is after request completed, all writes should have been queued by now
         // So following callback will be executed after all the data is written out
-        if(fileStream) {
+        logger.debug('Done uploading for: ' + uploadUUID + ' state: ' + clientMap[uploadUUID].state, req);
+        if(fileStream && clientMap[uploadUUID].error == 0) {
             fileStream.addListener('drain', function() {
                 // Close file stream
                 fileStream.end();
                 // Handle request completion, as all chunks were already written
                 clientMap[uploadUUID].url = ('http://' + serverAddress + ':' + serverPort + '/download?file=' + clientMap[uploadUUID].id + '/' + fileName); 
                 clientMap[uploadUUID].state = 'url';
-                logger.debug('Done uploading file and made it available on: ' + clientMap[uploadUUID].url, req);
+                logger.debug('Done uploading file and made it available on: ' + clientMap[uploadUUID].url + ' for client with sessid: ' + uploadUUID, req);
                 res.write('Upload successful!');
                 res.end();
-            })
+            });
         }   
     };
 }

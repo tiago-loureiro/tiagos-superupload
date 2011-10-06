@@ -2,9 +2,9 @@
 <html>
     <title>SuperUpload</title>
     <head>
-        <script language="javascript" type="text/javascript" src="/socket.io/socket.io.js"></script>
         <script language="javascript" type="text/javascript" src="/static/external/jquery.js"></script>
-        <script language="javascript" type="text/javascript" src="/static/index.js"></script>
+        <script language="javascript" type="text/javascript" src="/socket.io/socket.io.js"></script>
+		<script language="javascript" type="text/javascript" src="/static/index.js"></script>
     </head>
     <style type="text/css">
         body {
@@ -21,8 +21,6 @@
     </style>
     <body>
         <h2 style="padding: 10px">SuperUpload</h2>
-        <!-- Quick info for the user, this message is hidden on load if JS is enabled! -->
-        <div id='nojs'>This website doesn't work without JavaScript enabled!</div>
         
         <iframe id="uploadForm" src="/static/upload.html"
                 frameborder="0" height="60px" width="100%">
@@ -36,5 +34,9 @@
         <iframe id="descriptionForm" src="/static/description.html"
                 frameborder="0" height="200px" width="100%">
         </iframe>
+
+		<!-- Quick info for the user, this message is hidden on load if JS is enabled! -->
+        <div id='nojs'>If you see this message, your browser does not have javascript enabled!
+		Please enable it on your browser to view this website properly!</div>
     </body>
 </html>

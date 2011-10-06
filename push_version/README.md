@@ -123,33 +123,33 @@ In order to build and run the server, follow these steps:
 
 Download source code
 
-  wget https://github.com/tiago-loureiro/tiagos-superupload/tarball/master -O super_upload.tar.gz
-  tar zxvf super_upload.tar.gz
+	wget https://github.com/tiago-loureiro/tiagos-superupload/tarball/master -O super_upload.tar.gz
+	tar zxvf super_upload.tar.gz
 
 Install nodejs
 
-  wget http://nodejs.org/dist/v0.5.8/node-v0.5.8.tar.gz
-  tar zxvf node-v0.5.8.tar.gz
-  ./configure
-  ./make install
+	wget http://nodejs.org/dist/v0.5.8/node-v0.5.8.tar.gz
+	tar zxvf node-v0.5.8.tar.gz
+	./configure
+	./make install
 
 Install needed modules
 
-  wget https://github.com/isaacs/multipart-js/tarball/master -O multipart.tar.gz
-  npm install multipart
-  npm install socket.io
-  npm install mime
+	wget https://github.com/isaacs/multipart-js/tarball/master -O multipart.tar.gz
+	npm install multipart.tar.gz
+	npm install socket.io
+	npm install mime
 
 Enter the super_upload dir
 
-  cd tiago-loureiro-tiagos-superupload-XXXXXXX
+	cd tiago-loureiro-tiagos-superupload-XXXXXXX/push_version
 
 Edit super_upload.js and modify the variables accordingly
 
-  var serverAddress = '79.168.102.155';
-  var serverPort = 8080;
+	var serverAddress = '79.168.102.155';
+	var serverPort = 8080;
 
-  node super_upload
+	node super_upload
 
 Should be up and running, logging is done to stdout!
 
