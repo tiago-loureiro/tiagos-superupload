@@ -90,7 +90,7 @@ var serverHTTP = http.createServer(function (req, res) {
      }
 });
 
-var serverAddress = '79.168.102.155';
+var serverAddress = 'localhost';
 var serverPort = 8080;
 var clientMap = {};
 var logger = new Logger();
@@ -246,21 +246,26 @@ function handleDone(req, res) {
     });
     
     req.on('end', function() {
-        var parsedBody = querystring.parse(fullBody);
-        // at this point the directory is already created
-        var fullPathFileName = path.join(__dirname, 'uploads', clientMap[req.parsedUrl.parsedQuery.upload_uuid].id, 'description.txt');
-        var fileStream = fs.createWriteStream(fullPathFileName);
-        fileStream.write(parsedBody.descriptionText, 'utf-8');
-        fileStream.end();
+        try {
+	        var parsedBody = querystring.parse(fullBody);
+            // at this point the directory is already created
+            var fullPathFileName = path.join(__dirname, 'uploads', clientMap[req.parsedUrl.parsedQuery.upload_uuid].id, 'description.txt');
+            var fileStream = fs.createWriteStream(fullPathFileName);
+            fileStream.write(parsedBody.descriptionText, 'utf-8');
+            fileStream.end();
         
-        // notify end state
-        clientMap[req.parsedUrl.parsedQuery.upload_uuid].state = 'done';
+            // notify end state
+            clientMap[req.parsedUrl.parsedQuery.upload_uuid].state = 'done';
     
-        // output the decoded data to the HTTP response          
-        res.write('<br><br>Thank you for using SuperUpload! Your file has been stored at: <br><br>');
-        res.write(clientMap[req.parsedUrl.parsedQuery.upload_uuid].url);
-        res.write('<br><br>Along with the description:<br>"');
-        res.write(parsedBody.descriptionText + '"');
+            // output the decoded data to the HTTP response          
+            res.write('<br><br>Thank you for using SuperUpload! Your file has been stored at: <br><br>');
+            res.write(clientMap[req.parsedUrl.parsedQuery.upload_uuid].url);
+            res.write('<br><br>Along with the description:<br>"');
+            res.write(parsedBody.descriptionText + '"');
+        } catch(err) {
+            logger.error('Could not write to description file');
+            res.write('Could not create description file!');	
+        }
         res.end();
      });
 }
