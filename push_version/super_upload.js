@@ -90,7 +90,7 @@ var serverHTTP = http.createServer(function (req, res) {
      }
 });
 
-var serverAddress = 'localhost';
+var serverAddress = '79.168.103.147';
 var serverPort = 8080;
 var clientMap = {};
 var logger = new Logger();
@@ -229,7 +229,6 @@ function handleStaticFile(req, res) {
         }
     })
 }
-
 //==============================================================================
 /*
  * Handler for the description submission. Creates a file description.txt
@@ -246,26 +245,25 @@ function handleDone(req, res) {
     });
     
     req.on('end', function() {
-        try {
-	        var parsedBody = querystring.parse(fullBody);
-            // at this point the directory is already created
-            var fullPathFileName = path.join(__dirname, 'uploads', clientMap[req.parsedUrl.parsedQuery.upload_uuid].id, 'description.txt');
-            var fileStream = fs.createWriteStream(fullPathFileName);
-            fileStream.write(parsedBody.descriptionText, 'utf-8');
-            fileStream.end();
+        var parsedBody = querystring.parse(fullBody);
+        var fullPathFileName = path.join(__dirname, 'uploads', clientMap[req.parsedUrl.parsedQuery.upload_uuid].id, 'description.txt');
+        var fileStream = fs.createWriteStream(fullPathFileName);
+        fileStream.addListener('error', function(err) {
+            logger.error('Could not write to description file: ' + err);
+            res.write('Could not create description file, please try again!');
+            res.end();
+        });
+        fileStream.write(parsedBody.descriptionText, 'utf-8');
+        fileStream.end();
         
-            // notify end state
-            clientMap[req.parsedUrl.parsedQuery.upload_uuid].state = 'done';
+        // notify end state
+        clientMap[req.parsedUrl.parsedQuery.upload_uuid].state = 'done';
     
-            // output the decoded data to the HTTP response          
-            res.write('<br><br>Thank you for using SuperUpload! Your file has been stored at: <br><br>');
-            res.write(clientMap[req.parsedUrl.parsedQuery.upload_uuid].url);
-            res.write('<br><br>Along with the description:<br>"');
-            res.write(parsedBody.descriptionText + '"');
-        } catch(err) {
-            logger.error('Could not write to description file');
-            res.write('Could not create description file!');	
-        }
+        // output the decoded data to the HTTP response          
+        res.write('<br><br>Thank you for using SuperUpload! Your file has been stored at: <br><br>');
+        res.write(clientMap[req.parsedUrl.parsedQuery.upload_uuid].url);
+        res.write('<br><br>Along with the description:<br>"');
+        res.write(parsedBody.descriptionText + '"');
         res.end();
      });
 }
