@@ -182,7 +182,7 @@ function sendMessages() {
                     break;
                 case 'url':
                     sock.emit('url',client.url);
-                    client.state = 'wait-description'
+                    client.state = 'wait-description';
                     break;
                 case 'wait-description':
                     logger.debug('Waiting for description from: ' + sock.sessId);
@@ -191,6 +191,8 @@ function sendMessages() {
                     break;
                 case 'error':
                     sock.emit('error','An error has ocurred, please try uploading again!');
+                    client.state = 'done';
+                    break;
                 default:
                     logger.error('Unknown state!');
             }
